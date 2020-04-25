@@ -11,7 +11,7 @@ type Interface map[string]interface{}
 
 // return only iface line Interface
 func NewAdapter(name, AddrFam, AddrSource string) Interface {
-	var adapter Interface
+	var adapter =make(Interface)
 	adapter.SetName(name)
 	adapter.SetAddrFam(AddrFam)
 	adapter.SetAddrSource(AddrSource)
