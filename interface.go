@@ -9,6 +9,15 @@ import (
 
 type Interface map[string]interface{}
 
+// return only iface line Interface
+func NewAdapter(name, AddrFam, AddrSource string) Interface {
+	var adapter Interface
+	adapter.SetName(name)
+	adapter.SetAddrFam(AddrFam)
+	adapter.SetAddrSource(AddrSource)
+	return adapter
+}
+
 func (adapter Interface) Set(key string, v interface{}) {
 	adapter[key] = v
 }
@@ -44,6 +53,7 @@ func (adapter Interface) SetLookBack(turn bool) {
 		adapter.Set("lookback", "off")
 	}
 }
+
 // "static" Method
 func (adapter Interface) SetAddress(address net.IP) {
 	adapter.Set("address", address)
@@ -55,6 +65,7 @@ func (adapter Interface) SetNetmask(mask net.IPMask) {
 func (adapter Interface) SetBroadcast(broadcast net.IP) {
 	adapter.Set("broadcast", broadcast)
 }
+
 // Metric for added routes (dhclient)
 func (adapter Interface) SetMetric(metric int) {
 	adapter.Set("metric", metric)
@@ -89,6 +100,7 @@ func (adapter Interface) SetScope(scope string) error {
 	}
 	return nil
 }
+
 // "bootp" Method
 func (adapter Interface) SetServer(server net.IP) {
 	adapter.Set("server", server)
@@ -141,6 +153,7 @@ func (adapter Interface) SetUpScript(up string) {
 	}
 	adapter["up"] = append(adapter["up"].([]string), up)
 }
+
 // Run  command  after  bringing the interface up.  If this command fails then ifup aborts, refraining from marking the interface as configured
 // (even though it has really been configured), prints an error message, and exits with status 0.  This behavior may change in the future.
 func (adapter Interface) SetPostUpScript(up string) {
@@ -228,59 +241,61 @@ func (adapter Interface) SetUnkonw(unkonw string) {
 }
 
 func (adapter Interface) GetName() string {
-	if adapter["name"]==nil {
+	if adapter["name"] == nil {
 		return "<nil>"
 	}
 	return adapter["name"].(string)
 }
+
 // convert Interface to debian network file format
-func (adapter Interface) Export() (string)  {
+func (adapter Interface) Export() string {
 	var output string
 
-	if adapter["auto"]==true {
-		output+=fmt.Sprintf("auto %s\n",adapter["name"])
+	if adapter["auto"] == true {
+		output += fmt.Sprintf("auto %s\n", adapter["name"])
 	}
-	if adapter["hotplug"]==true {
-		output+=fmt.Sprintf("hotplug %s\n",adapter["name"])
+	if adapter["hotplug"] == true {
+		output += fmt.Sprintf("hotplug %s\n", adapter["name"])
 	}
-	output+=fmt.Sprintf("iface %s %s %s\n",adapter["name"],adapter["addrFam"],adapter["method_name"])
-	for k,v:=range adapter {
-		if k == "method_name" || k == "addrFam" || k == "name"||k=="fromfile" {
+	output += fmt.Sprintf("iface %s %s %s\n", adapter["name"], adapter["addrFam"], adapter["method_name"])
+	for k, v := range adapter {
+		if k == "method_name" || k == "addrFam" || k == "name" || k == "fromfile" {
 			continue
 		}
 		switch v.(type) {
 		case string:
-			output+=fmt.Sprintf("\t%s %s\n",k,v)
+			output += fmt.Sprintf("\t%s %s\n", k, v)
 		case net.IP:
-			output+=fmt.Sprintf("\t%s %s\n",k,v.(net.IP).String())
+			output += fmt.Sprintf("\t%s %s\n", k, v.(net.IP).String())
 		case net.IPMask:
-			output+=fmt.Sprintf("\t%s %s\n",k,ToIPv4(v.(net.IPMask)))
+			output += fmt.Sprintf("\t%s %s\n", k, ToIPv4(v.(net.IPMask)))
 		case []string:
 			switch k {
 			case "pre-up", "up", "post-up", "down", "pre-down", "post-down":
-				for _,str:=range v.([]string) {
-					output+=fmt.Sprintf("\t%s %s\n",k,str)
+				for _, str := range v.([]string) {
+					output += fmt.Sprintf("\t%s %s\n", k, str)
 				}
 			case "unknow":
-				for _,str:=range v.([]string) {
-					output+=fmt.Sprintf("\t%s\n",str)
+				for _, str := range v.([]string) {
+					output += fmt.Sprintf("\t%s\n", str)
 				}
 			default:
-				output+=fmt.Sprintf("\t%s %s\n",k,strings.Join(v.([]string),""))
+				output += fmt.Sprintf("\t%s %s\n", k, strings.Join(v.([]string), ""))
 			}
 		case []net.IP:
-			ipList:=[]string{}
-			for _,ip:=range v.([]net.IP) {
-				ipList=append(ipList,ip.String())
+			ipList := []string{}
+			for _, ip := range v.([]net.IP) {
+				ipList = append(ipList, ip.String())
 			}
-			output+=fmt.Sprintf("\t%s %s\n",k,strings.Join(ipList," "))
+			output += fmt.Sprintf("\t%s %s\n", k, strings.Join(ipList, " "))
 		case int:
-			output+=fmt.Sprintf("\t%s %d\n",k,v)
+			output += fmt.Sprintf("\t%s %d\n", k, v)
 
 		}
 	}
 	return output
 }
+
 // Convert ipv4 mask to ip format, skip ipv6 convert
 func ToIPv4(m net.IPMask) string {
 	p := m[len(m)-4:]

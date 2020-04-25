@@ -16,24 +16,34 @@ import (
 var letterRunes = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
 
 type Interfaces struct {
-	backupPath      string
-	FilePath        string
-	Adapters        []Interface
+	backupPath string
+	FilePath   string
+	//Adapters        []Interface
 	SourceDirectory string
 	Source          string
 }
 
 func (f *Interfaces) Add(Adapter Interface) error {
-	f.Adapters = append(f.Adapters, Adapter)
+
+	//f.Adapters = append(f.Adapters, Adapter)
+	reader := NewReader("")
+	err := reader.Read()
+	if err == nil {
+		for _, i := range reader.Adapters {
+			if i.GetName() == Adapter.GetName() {
+				return nil
+			}
+		}
+	}
 	if f.Source != "" || f.SourceDirectory != "" {
 		if f.Source != "" {
 			dir := filepath.Dir(f.Source)
-			err := ioutil.WriteFile(path.Join(dir, Adapter["name"].(string)), []byte(Adapter.Export()), 0644)
+			err := ioutil.WriteFile(path.Join(dir, Adapter.GetName()), []byte(Adapter.Export()), 0644)
 			return err
 		}
 		if f.SourceDirectory != "" {
 			dir := filepath.Dir(f.SourceDirectory)
-			err := ioutil.WriteFile(path.Join(dir, Adapter["name"].(string)), []byte(Adapter.Export()), 0644)
+			err := ioutil.WriteFile(path.Join(dir, Adapter.GetName()), []byte(Adapter.Export()), 0644)
 			return err
 		}
 	}
@@ -277,4 +287,3 @@ func RandStringRunes(n int) string {
 	}
 	return string(b)
 }
-
