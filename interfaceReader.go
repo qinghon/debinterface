@@ -18,8 +18,7 @@ type InterfaceReader struct {
 	Interfaces     []Interfaces
 	context        int
 	headerComments string
-	auto           []string
-	hotplug        []string
+	selection      map[string][]string
 	filepath       string
 }
 
@@ -31,6 +30,7 @@ func NewReader(_filepath string) *InterfaceReader {
 	} else {
 		reader.filepath = _filepath
 	}
+	reader.selection = make(map[string][]string)
 	return &reader
 }
 func (reader *InterfaceReader) Read() error {
@@ -97,15 +97,17 @@ func (reader *InterfaceReader) ParseIface(line, filepath string) {
 func (reader *InterfaceReader) ReadAuto(line string) {
 	sline := strings.Fields(line)
 	switch sline[0] {
-	case "auto":
-		reader.auto = append(reader.auto, sline[1])
-	case "hotplug":
-		reader.hotplug = append(reader.hotplug, sline[1])
+	//case "auto":
+	//	reader.auto = append(reader.auto, sline[1])
+	//case "hotplug":
+	//	reader.hotplug = append(reader.hotplug, sline[1])
+	case "auto", "hotplug", "allow-hotplug", "no-auto-down", "no-scripts":
+		reader.selection[sline[1]] = append(reader.selection[sline[1]], sline[0])
 	}
 }
 func (reader *InterfaceReader) ParseAuto() {
 	for i, a := range reader.Adapters {
-		for _, au := range reader.auto {
+		/*for _, au := range reader.auto {
 			if a["name"] == au {
 				reader.Adapters[i].SetAuto(true)
 			}
@@ -113,6 +115,11 @@ func (reader *InterfaceReader) ParseAuto() {
 		for _, hp := range reader.hotplug {
 			if a["name"] == hp {
 				reader.Adapters[i].SetHotplug(true)
+			}
+		}*/
+		if len(reader.selection[a.GetName()]) != 0 {
+			for _, v := range reader.selection[a.GetName()] {
+				reader.Adapters[i].SetSelection(v)
 			}
 		}
 	}
@@ -125,7 +132,7 @@ func (reader *InterfaceReader) ParseDetails(line string) error {
 	}
 
 	switch sline[0] {
-	case "auto", "iface":
+	case "auto", "iface", "allow-hotplug", "no-auto-down", "no-scripts":
 		return nil
 	case "address":
 		if strings.Contains(sline[1], "/") {
@@ -177,7 +184,11 @@ func (reader *InterfaceReader) ParseDetails(line string) error {
 		reader.Adapters[reader.context].SetBroadcast(net.ParseIP(sline[1]))
 	case "up", "down", "pre-up", "pre-down", "post-up", "post-down":
 		reader.Adapters[reader.context].SetScript(sline[0], strings.Join(sline[1:], " "))
-	case "source":
+	case "source", "source-directory":
+		if sline[0] == "source-directory" {
+			//todo source-directory parse
+			return nil
+		}
 		files, err := filepath.Glob(sline[1])
 		if err != nil {
 			//log.Println(err)
@@ -192,7 +203,9 @@ func (reader *InterfaceReader) ParseDetails(line string) error {
 		reader.Adapters[reader.context].SetProvider(sline[1])
 	default:
 		//log.Println("Unknow options",sline)
-		reader.Adapters[reader.context].SetUnkonw(line)
+		if reader.context != -1 {
+			reader.Adapters[reader.context].SetUnkonw(line)
+		}
 	}
 	return nil
 }

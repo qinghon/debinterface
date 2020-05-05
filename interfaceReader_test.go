@@ -15,7 +15,8 @@ func TestInterfaceReader_ParseAuto(t *testing.T) {
 func TestInterfaceReader_ReadLines(t *testing.T) {
 	ioutil.WriteFile("/tmp/testInterface1", []byte(`
 # madwifi-ng WDS Bridge
-#source /etc/network/interfaces.d/*
+source /etc/network/interfaces.d/*
+no-auto-down br0
 auto br0
 iface br0 inet static
        address 192.168.1.2/24
@@ -42,6 +43,11 @@ iface br0 inet static
 iface br0 inet6 auto
 	dhcp 1
 	request_prefix 1
+no-auto-down eth0
+allow-auto eth0
+no-scripts eth0
+allow-hotplug eth0
+iface eth0 inet dhcp
 `), 0644)
 	var reader = NewReader("/tmp/testInterface1")
 
@@ -52,6 +58,32 @@ iface br0 inet6 auto
 	//js,_:=json.Marshal(reader.Adapters)
 	//t.Log(string(js))
 	t.Log(reader.Adapters)
+	for _, v := range reader.Adapters {
+		t.Log(v.Export())
+	}
+}
+func TestInterfaceReader_ReadLines_2(t *testing.T) {
+	ioutil.WriteFile("/tmp/testInterface2", []byte(`
+no-auto-dow tap0
+auto tap0
+iface tap0 inet static
+       address 192.168.1.2
+       netmask 255.255.255.0
+       network 192.168.1.0
+       broadcast 192.168.1.255
+`), 0644)
+	var reader = NewReader("/tmp/testInterface2")
+
+	err := reader.ReadLines("/tmp/testInterface2")
+	if err != nil {
+		t.Error(err)
+	}
+	//js,_:=json.Marshal(reader.Adapters)
+	//t.Log(string(js))
+	t.Log(reader.Adapters)
+	for _, v := range reader.Adapters {
+		t.Log(v.Export())
+	}
 }
 func BenchmarkInterfaceReader_ReadLines(b *testing.B) {
 	ioutil.WriteFile("/tmp/testInterface1", []byte(`
@@ -83,6 +115,7 @@ iface br0 inet static
 iface br0 inet6 auto
 	dhcp 1
 	request_prefix 1
+
 `), 0644)
 	var reader = NewReader("/tmp/testInterface1")
 	b.ResetTimer() // HL

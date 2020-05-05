@@ -11,7 +11,7 @@ type Interface map[string]interface{}
 
 // return only iface line Interface
 func NewAdapter(name, AddrFam, AddrSource string) Interface {
-	var adapter =make(Interface)
+	var adapter = make(Interface)
 	adapter.SetName(name)
 	adapter.SetAddrFam(AddrFam)
 	adapter.SetAddrSource(AddrSource)
@@ -21,11 +21,17 @@ func NewAdapter(name, AddrFam, AddrSource string) Interface {
 func (adapter Interface) Set(key string, v interface{}) {
 	adapter[key] = v
 }
+func (adapter Interface) SetSelection(sel string) {
+	if adapter["selection"] == nil {
+		adapter["selection"] = []string{}
+	}
+	adapter["selection"] = append(adapter["selection"].([]string), sel)
+}
 func (adapter Interface) SetAuto(f bool) {
-	adapter.Set("auto", f)
+	adapter.SetSelection("auto")
 }
 func (adapter Interface) SetHotplug(f bool) {
-	adapter.Set("allow-hotplug", f)
+	adapter.SetSelection("allow-hotplug")
 }
 func (adapter Interface) SetName(name string) {
 	adapter.Set("name", name)
@@ -251,12 +257,13 @@ func (adapter Interface) GetName() string {
 func (adapter Interface) Export() string {
 	var output string
 
-	if adapter["auto"] == true {
-		output += fmt.Sprintf("auto %s\n", adapter["name"])
-	}
-	if adapter["hotplug"] == true {
-		output += fmt.Sprintf("hotplug %s\n", adapter["name"])
-	}
+	//if adapter["auto"] == true {
+	//	output += fmt.Sprintf("auto %s\n", adapter["name"])
+	//}
+	//if adapter["hotplug"] == true {
+	//	output += fmt.Sprintf("hotplug %s\n", adapter["name"])
+	//}
+
 	output += fmt.Sprintf("iface %s %s %s\n", adapter["name"], adapter["addrFam"], adapter["method_name"])
 	for k, v := range adapter {
 		if k == "method_name" || k == "addrFam" || k == "name" || k == "fromfile" {
@@ -278,6 +285,10 @@ func (adapter Interface) Export() string {
 			case "unknow":
 				for _, str := range v.([]string) {
 					output += fmt.Sprintf("\t%s\n", str)
+				}
+			case "selection":
+				for _, str := range v.([]string) {
+					output = fmt.Sprintf("%s %s\n", str, adapter["name"]) + output
 				}
 			default:
 				output += fmt.Sprintf("\t%s %s\n", k, strings.Join(v.([]string), ""))

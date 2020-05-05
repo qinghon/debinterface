@@ -80,9 +80,9 @@ func TestInterfaces_Del(t *testing.T) {
 	adapter.SetUnkonw("server 192.168.4.1")
 	TestGenTestFile(t)
 	var adapters = Interfaces{}
-	adapters.FilePath="/tmp/testInterface1"
-	adapters.Adapters=append(adapters.Adapters,adapter)
-	err:=adapters.Del(adapter)
+	adapters.FilePath = "/tmp/testInterface1"
+	//adapters.Adapters=append(adapters.Adapters,adapter)
+	err := adapters.Del(adapter)
 	if err != nil {
 		t.Error(err)
 	}
@@ -99,9 +99,9 @@ func TestInterfaces_Update(t *testing.T) {
 	adapter.SetUnkonw("server 192.168.4.1")
 	TestGenTestFile(t)
 	var adapters = Interfaces{}
-	adapters.FilePath="/tmp/testInterface1"
-	adapters.Adapters=append(adapters.Adapters,adapter)
-	err:=adapters.Update(adapter)
+	adapters.FilePath = "/tmp/testInterface1"
+	//adapters.Adapters=append(adapters.Adapters,adapter)
+	err := adapters.Update(adapter)
 	if err != nil {
 		t.Error(err)
 	}
@@ -118,9 +118,9 @@ func TestInterfaces_Add(t *testing.T) {
 	adapter.SetUnkonw("server 192.168.4.1")
 	TestGenTestFile(t)
 	var adapters = Interfaces{}
-	adapters.FilePath="/tmp/testInterface1"
-	adapters.Adapters=append(adapters.Adapters,adapter)
-	err:=adapters.Add(adapter)
+	adapters.FilePath = "/tmp/testInterface1"
+	//adapters.Adapters=append(adapters.Adapters,adapter)
+	err := adapters.Add(adapter)
 	if err != nil {
 		t.Error(err)
 	}
