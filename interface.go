@@ -9,6 +9,11 @@ import (
 
 type Interface map[string]interface{}
 
+type FloatKey struct {
+	Option []string
+	Key    string
+}
+
 // return only iface line Interface
 func NewAdapter(name, AddrFam, AddrSource string) Interface {
 	var adapter = make(Interface)
@@ -21,6 +26,9 @@ func NewAdapter(name, AddrFam, AddrSource string) Interface {
 func (adapter Interface) Set(key string, v interface{}) {
 	adapter[key] = v
 }
+
+// Set Selection for iface, like "auto", "iface", "allow-hotplug", "no-auto-down",
+// "no-scripts" or custom ...
 func (adapter Interface) SetSelection(sel string) {
 	if adapter["selection"] == nil {
 		adapter["selection"] = []string{}
@@ -36,12 +44,20 @@ func (adapter Interface) SetHotplug(f bool) {
 func (adapter Interface) SetName(name string) {
 	adapter.Set("name", name)
 }
+
+// Set iface address family
+// The interface name is followed by the name of the address family that  the  interface  uses.   This
+// will be "inet" for TCP/IP networking, but there is also some support for IPX networking ("ipx"),
+// and IPv6 networking ("inet6").  Following that is the name of the method used to configure the interface.
 func (adapter Interface) SetAddrFam(addrFam string) {
 	switch addrFam {
 	case "inet", "inet6", "ipx", "can":
 		adapter.Set("addrFam", addrFam)
 	}
 }
+
+// Set address method
+// The method of the interface (e.g., static), or "none" (see below).
 func (adapter Interface) SetAddrSource(methodName string) {
 	switch methodName {
 	case "dhcp", "static", "loopback", "manual",
@@ -51,7 +67,7 @@ func (adapter Interface) SetAddrSource(methodName string) {
 	}
 }
 
-// The loopback Method
+// The loopback method
 func (adapter Interface) SetLookBack(turn bool) {
 	if turn {
 		adapter.Set("lookback", "on")
@@ -61,13 +77,17 @@ func (adapter Interface) SetLookBack(turn bool) {
 }
 
 // "static" Method
+// Set static ip address
 func (adapter Interface) SetAddress(address net.IP) {
 	adapter.Set("address", address)
 }
+
+// Set netmask
 func (adapter Interface) SetNetmask(mask net.IPMask) {
 	adapter.Set("netmask", mask)
 }
 
+// Set Broadcast address (dotted quad, + or -). Default value: "+"
 func (adapter Interface) SetBroadcast(broadcast net.IP) {
 	adapter.Set("broadcast", broadcast)
 }
@@ -76,27 +96,33 @@ func (adapter Interface) SetBroadcast(broadcast net.IP) {
 func (adapter Interface) SetMetric(metric int) {
 	adapter.Set("metric", metric)
 }
+
+// Set Default gateway (dotted quad)
 func (adapter Interface) SetGateWay(ip net.IP) {
 	adapter.Set("gateway", ip)
 }
 
+// Address of other end point (dotted quad). Note the spelling of "point-to".
 func (adapter Interface) SetPoinToPoint(ip net.IP) error {
 	adapter.Set("pointopoint", ip)
 	return nil
 }
 
-// "manual" "static"  "dhcp" Method
 // Hardware address.
-func (adapter Interface) SetHwaddress(hwaddress net.HardwareAddr) error {
+// "manual" "static"  "dhcp" Method
+func (adapter Interface) SetHwAddress(hwaddress net.HardwareAddr) error {
 	adapter.Set("hwaddress", hwaddress)
 	return nil
 }
 
-// "manual" "static" "dhcp" Method
+// Set MTU size
+//
+// In "manual" "static" "dhcp" Method
 func (adapter Interface) SetMtu(mtu int) {
 	adapter.Set("mtu", mtu)
 }
 
+// Set Scope: "global", "link", "host"
 func (adapter Interface) SetScope(scope string) error {
 	switch scope {
 	case "global", "link", "host":
@@ -107,7 +133,8 @@ func (adapter Interface) SetScope(scope string) error {
 	return nil
 }
 
-// "bootp" Method
+// Set Use the IP address address to communicate with the server.
+// In "bootp" Method
 func (adapter Interface) SetServer(server net.IP) {
 	adapter.Set("server", server)
 }
@@ -117,11 +144,20 @@ func (adapter Interface) SetDstAddr(dstaddr net.IP) {
 func (adapter Interface) SetLocal(local net.IP) {
 	adapter.Set("local", local)
 }
+
+// Set "dns-nameserver"
 func (adapter Interface) SetDnsNameServer(ipList []net.IP) {
 	adapter.Set("dns-nameserver", ipList)
 }
+
+// Set "dns-search" ,like "local", "lan"
 func (adapter Interface) SetDnsSearch(ipList []string) {
 	adapter.Set("dns-search", ipList)
+}
+
+// Set "dns-domain" ,like "example.com"
+func (adapter Interface) SetDnsDomain(domainList []string) {
+	adapter.Set("dns-domain", domainList)
 }
 
 // IFACE OPTIONS
@@ -145,46 +181,58 @@ func (adapter Interface) SetScript(action string, script string) {
 	}
 }
 
-// Run command before bringing the interface up.  If this command fails then ifup aborts, refraining from marking the interface as  configured,
+// Run command before bringing the interface up.  If this command fails then ifup aborts,
+// refraining from marking the interface as  configured,
 // prints an error message, and exits with status 0.  This behavior may change in the future.
-func (adapter Interface) SetPreUpScript(up string) {
+func (adapter Interface) SetPreUpScript(command string) {
 	if adapter["pre-up"] == nil {
 		adapter["pre-up"] = []string{}
 	}
-	adapter["pre-up"] = append(adapter["pre-up"].([]string), up)
+	adapter["pre-up"] = append(adapter["pre-up"].([]string), command)
 }
-func (adapter Interface) SetUpScript(up string) {
+
+// up command
+func (adapter Interface) SetUpScript(command string) {
 	if adapter["up"] == nil {
 		adapter["up"] = []string{}
 	}
-	adapter["up"] = append(adapter["up"].([]string), up)
+	adapter["up"] = append(adapter["up"].([]string), command)
 }
 
-// Run  command  after  bringing the interface up.  If this command fails then ifup aborts, refraining from marking the interface as configured
-// (even though it has really been configured), prints an error message, and exits with status 0.  This behavior may change in the future.
-func (adapter Interface) SetPostUpScript(up string) {
+// Run  command  after bringing the interface up.  If this command fails then ifup aborts, refraining from
+// marking the interface as configured (even though it has really been configured), prints an  error
+// message, and exits with status 0.  This behavior may change in the future.
+func (adapter Interface) SetPostUpScript(command string) {
 	if adapter["post-up"] == nil {
 		adapter["post-up"] = []string{}
 	}
-	adapter["post-up"] = append(adapter["post-up"].([]string), up)
+	adapter["post-up"] = append(adapter["post-up"].([]string), command)
 }
-func (adapter Interface) SetDownScript(up string) {
+func (adapter Interface) SetDownScript(command string) {
 	if adapter["down"] == nil {
 		adapter["down"] = []string{}
 	}
-	adapter["down"] = append(adapter["down"].([]string), up)
+	adapter["down"] = append(adapter["down"].([]string), command)
 }
-func (adapter Interface) SetPreDownScript(up string) {
+
+// Run  command  before  taking the interface down.  If this command fails then ifdown
+// aborts, marks the interface as deconfigured (even though it  has  not  really  been
+// deconfigured), and exits with status 0.  This behavior may change in the future.
+func (adapter Interface) SetPreDownScript(command string) {
 	if adapter["pre-down"] == nil {
 		adapter["pre-down"] = []string{}
 	}
-	adapter["pre-down"] = append(adapter["pre-down"].([]string), up)
+	adapter["pre-down"] = append(adapter["pre-down"].([]string), command)
 }
-func (adapter Interface) SetPostDownScript(up string) {
+
+// Run  command  after  taking  the interface down.  If this command fails then ifdown
+// aborts, marks the interface as deconfigured, and exits with status 0.
+// This  behavior may change in the future.
+func (adapter Interface) SetPostDownScript(command string) {
 	if adapter["post-down"] == nil {
 		adapter["post-down"] = []string{}
 	}
-	adapter["post-down"] = append(adapter["post-down"].([]string), up)
+	adapter["post-down"] = append(adapter["post-down"].([]string), command)
 }
 
 // "dhcp" Method (pump, dhcpcd, udhcpc)
@@ -213,15 +261,42 @@ func (adapter Interface) SetClient(client string) {
 	adapter.Set("client", client)
 }
 
-// The bootp Method
+// The bootp Method.
 func (adapter Interface) SetBootFile(bootfile string) {
 	adapter.Set("bootfile", bootfile)
 }
 
-// The ppp Method
+// The ppp Method.
 // Use name as the provider (from /etc/ppp/peers).
 func (adapter Interface) SetProvider(provider string) {
 	adapter.Set("provider", provider)
+}
+
+// Set bridge Spanning Tree Protocol
+func (adapter Interface) SetBridgeStp(off bool) {
+	adapter.Set("bridge_stp", off)
+}
+
+// Set delay before a port becomes available
+func (adapter Interface) SetBridgeWaitPort(delay int) {
+	adapter.Set("bridge_waitport", delay)
+}
+
+// Forwarding delay
+func (adapter Interface) SetBridgeFd(delay int) {
+	adapter.Set("bridge_fd", delay)
+}
+
+// Set bridge adapter bridge to define ports.
+// The option:
+//	"none": not  bind to any ports.
+//  "regex": use a regular expression to define ports
+// Default option is ""
+func (adapter Interface) SetBridgePorts(option, eth string) {
+	if option == "" && eth == "" {
+		return
+	}
+	adapter.Set("bridge_ports", FloatKey{Option: []string{option}, Key: eth})
 }
 
 // Use number as the ppp unit number.
@@ -239,13 +314,15 @@ func (adapter Interface) SetFromFile(_filepath string) {
 	adapter["fromfile"] = _filepath
 }
 
-func (adapter Interface) SetUnkonw(unkonw string) {
-	if adapter["unknow"] == nil {
-		adapter["unknow"] = []string{}
+// Set unknow key, "Export()" together
+func (adapter Interface) SetUnknown(unknown string) {
+	if adapter["unknown"] == nil {
+		adapter["unknown"] = []string{}
 	}
-	adapter["unknow"] = append(adapter["unknow"].([]string), unkonw)
+	adapter["unknown"] = append(adapter["unknown"].([]string), unknown)
 }
 
+// Get adapter name ,like "eth0", "br0"
 func (adapter Interface) GetName() string {
 	if adapter["name"] == nil {
 		return "<nil>"
@@ -256,13 +333,6 @@ func (adapter Interface) GetName() string {
 // convert Interface to debian network file format
 func (adapter Interface) Export() string {
 	var output string
-
-	//if adapter["auto"] == true {
-	//	output += fmt.Sprintf("auto %s\n", adapter["name"])
-	//}
-	//if adapter["hotplug"] == true {
-	//	output += fmt.Sprintf("hotplug %s\n", adapter["name"])
-	//}
 
 	output += fmt.Sprintf("iface %s %s %s\n", adapter["name"], adapter["addrFam"], adapter["method_name"])
 	for k, v := range adapter {
@@ -282,7 +352,7 @@ func (adapter Interface) Export() string {
 				for _, str := range v.([]string) {
 					output += fmt.Sprintf("\t%s %s\n", k, str)
 				}
-			case "unknow":
+			case "unknown":
 				for _, str := range v.([]string) {
 					output += fmt.Sprintf("\t%s\n", str)
 				}
@@ -301,7 +371,14 @@ func (adapter Interface) Export() string {
 			output += fmt.Sprintf("\t%s %s\n", k, strings.Join(ipList, " "))
 		case int:
 			output += fmt.Sprintf("\t%s %d\n", k, v)
-
+		case FloatKey:
+			output += fmt.Sprintf("\t%s %s\n", k, v.(FloatKey).String())
+		case bool:
+			if v.(bool) {
+				output += fmt.Sprintf("\t%s on\n", k)
+			} else {
+				output += fmt.Sprintf("\t%s off\n", k)
+			}
 		}
 	}
 	return output
@@ -354,4 +431,8 @@ func ubtoa(dst []byte, start int, v byte) int {
 	dst[start+1] = (v/10)%10 + '0'
 	dst[start] = v/100 + '0'
 	return 3
+}
+
+func (fk FloatKey) String() string {
+	return strings.Join(fk.Option, " ") + " " + fk.Key
 }

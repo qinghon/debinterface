@@ -77,7 +77,7 @@ func TestInterfaces_Del(t *testing.T) {
 	adapter.SetAddress(net.ParseIP("192.168.4.2"))
 	adapter.SetGateWay(net.ParseIP("192.168.4.1"))
 	adapter.SetMtu(60)
-	adapter.SetUnkonw("server 192.168.4.1")
+	adapter.SetUnknown("server 192.168.4.1")
 	TestGenTestFile(t)
 	var adapters = Interfaces{}
 	adapters.FilePath = "/tmp/testInterface1"
@@ -96,7 +96,7 @@ func TestInterfaces_Update(t *testing.T) {
 	adapter.SetAddress(net.ParseIP("192.168.4.2"))
 	adapter.SetGateWay(net.ParseIP("192.168.4.1"))
 	adapter.SetMtu(60)
-	adapter.SetUnkonw("server 192.168.4.1")
+	adapter.SetUnknown("server 192.168.4.1")
 	TestGenTestFile(t)
 	var adapters = Interfaces{}
 	adapters.FilePath = "/tmp/testInterface1"
@@ -115,7 +115,7 @@ func TestInterfaces_Add(t *testing.T) {
 	adapter.SetAddress(net.ParseIP("192.168.4.2"))
 	adapter.SetGateWay(net.ParseIP("192.168.4.1"))
 	adapter.SetMtu(60)
-	adapter.SetUnkonw("server 192.168.4.1")
+	adapter.SetUnknown("server 192.168.4.1")
 	TestGenTestFile(t)
 	var adapters = Interfaces{}
 	adapters.FilePath = "/tmp/testInterface1"

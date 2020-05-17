@@ -23,6 +23,7 @@ type Interfaces struct {
 	Source          string
 }
 
+// if adapter has in the file ,update adapter config block
 func (f *Interfaces) Add(Adapter Interface) error {
 
 	//f.Adapters = append(f.Adapters, Adapter)
@@ -31,6 +32,7 @@ func (f *Interfaces) Add(Adapter Interface) error {
 	if err == nil {
 		for _, i := range reader.Adapters {
 			if i.GetName() == Adapter.GetName() {
+				f.Update(Adapter)
 				return nil
 			}
 		}

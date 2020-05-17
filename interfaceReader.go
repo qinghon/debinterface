@@ -48,12 +48,15 @@ func (reader *InterfaceReader) ReadLines(_filepath string) error {
 	br := bufio.NewReader(fp)
 	var header = false
 	var lineStr = ""
+	var lineByte []byte
+	var e error
 	for {
-		lineByte, _, e := br.ReadLine()
-		lineStr = string([]rune(string(lineByte)))
+		lineByte, _, e = br.ReadLine()
 		if e == io.EOF {
 			break
 		}
+		//println(string(lineByte))
+		lineStr = string([]rune(string(lineByte)))
 		if strings.TrimSpace(lineStr) == "" {
 			continue
 		}
@@ -68,20 +71,61 @@ func (reader *InterfaceReader) ReadLines(_filepath string) error {
 		if strings.Index(lineStr, "#") != -1 {
 			lineStr = lineStr[:strings.Index(lineStr, "#")]
 		}
-		if strings.TrimSpace(lineStr) == "" {
+		lineStr = strings.TrimSpace(lineStr)
+		if lineStr == "" {
 			continue
 		}
-		lineStr = strings.TrimSpace(lineStr)
-		reader.ReadAuto(lineStr)
-		reader.ParseIface(lineStr, _filepath)
-		if err := reader.ParseDetails(lineStr); err != nil {
+		reader.readAuto(lineStr)
+		reader.parseIface(lineStr)
+		if err = reader.parseDetails(lineStr); err != nil {
 			return err
 		}
 	}
-	reader.ParseAuto()
+	reader.parseAuto()
 	return nil
 }
-func (reader *InterfaceReader) ParseIface(line, filepath string) {
+func (reader *InterfaceReader) ReadFromRD(rd io.Reader) error {
+	br := bufio.NewReader(rd)
+	var header = false
+	var lineStr = ""
+	var lineByte []byte
+	var e, err error
+	for {
+		lineByte, _, e = br.ReadLine()
+		if e == io.EOF {
+			break
+		}
+		//println(string(lineByte))
+		lineStr = string([]rune(string(lineByte)))
+		if strings.TrimSpace(lineStr) == "" {
+			continue
+		}
+		if strings.TrimSpace(lineStr)[0:1] == "#" {
+			if !header {
+				reader.headerComments += lineStr
+			}
+			continue
+		}
+		header = false
+		// 去掉行尾 "#"
+		if strings.Index(lineStr, "#") != -1 {
+			lineStr = lineStr[:strings.Index(lineStr, "#")]
+		}
+		lineStr = strings.TrimSpace(lineStr)
+		if lineStr == "" {
+			continue
+		}
+		reader.readAuto(lineStr)
+
+		reader.parseIface(lineStr)
+		if err = reader.parseDetails(lineStr); err != nil {
+			return err
+		}
+	}
+	reader.parseAuto()
+	return nil
+}
+func (reader *InterfaceReader) parseIface(line string) {
 	sline := strings.Fields(line)
 	if sline[0] == "iface" {
 		reader.context = reader.context + 1
@@ -89,12 +133,12 @@ func (reader *InterfaceReader) ParseIface(line, filepath string) {
 		adapter.SetName(sline[1])
 		adapter.SetAddrFam(sline[2])
 		adapter.SetAddrSource(sline[3])
-		adapter.SetFromFile(filepath)
+		//adapter.SetFromFile(filepath)
 		reader.Adapters = append(reader.Adapters, adapter)
 
 	}
 }
-func (reader *InterfaceReader) ReadAuto(line string) {
+func (reader *InterfaceReader) readAuto(line string) {
 	sline := strings.Fields(line)
 	switch sline[0] {
 	//case "auto":
@@ -105,18 +149,10 @@ func (reader *InterfaceReader) ReadAuto(line string) {
 		reader.selection[sline[1]] = append(reader.selection[sline[1]], sline[0])
 	}
 }
-func (reader *InterfaceReader) ParseAuto() {
+
+//
+func (reader *InterfaceReader) parseAuto() {
 	for i, a := range reader.Adapters {
-		/*for _, au := range reader.auto {
-			if a["name"] == au {
-				reader.Adapters[i].SetAuto(true)
-			}
-		}
-		for _, hp := range reader.hotplug {
-			if a["name"] == hp {
-				reader.Adapters[i].SetHotplug(true)
-			}
-		}*/
 		if len(reader.selection[a.GetName()]) != 0 {
 			for _, v := range reader.selection[a.GetName()] {
 				reader.Adapters[i].SetSelection(v)
@@ -124,7 +160,7 @@ func (reader *InterfaceReader) ParseAuto() {
 		}
 	}
 }
-func (reader *InterfaceReader) ParseDetails(line string) error {
+func (reader *InterfaceReader) parseDetails(line string) error {
 	sline := strings.Fields(line)
 	//log.Println(sline,len(sline))
 	if len(sline) < 2 {
@@ -156,18 +192,16 @@ func (reader *InterfaceReader) ParseDetails(line string) error {
 		reader.Adapters[reader.context].SetGateWay(net.ParseIP(sline[1]))
 	case "mtu":
 		mtu, err := strconv.Atoi(sline[1])
-		if err == nil {
-			reader.Adapters[reader.context].SetMtu(mtu)
-		} else {
-			//log.Println(err)
+		if err != nil {
 			return err
 		}
+		reader.Adapters[reader.context].SetMtu(mtu)
 	case "scope":
 		reader.Adapters[reader.context].SetScope(sline[1])
 	case "hwaddress":
 		mac, err := net.ParseMAC(sline[1])
 		if err == nil {
-			reader.Adapters[reader.context].SetHwaddress(mac)
+			reader.Adapters[reader.context].SetHwAddress(mac)
 		} else {
 			//log.Println(err)
 			return err
@@ -201,10 +235,39 @@ func (reader *InterfaceReader) ParseDetails(line string) error {
 		reader.Adapters[reader.context].SetPoinToPoint(net.ParseIP(sline[1]))
 	case "provider":
 		reader.Adapters[reader.context].SetProvider(sline[1])
+	case "bridge_ports":
+		switch sline[1] {
+		case "none":
+			reader.Adapters[reader.context].SetBridgePorts(sline[1], "")
+		case "regex":
+			reader.Adapters[reader.context].SetBridgePorts(sline[1], sline[2])
+		default:
+			reader.Adapters[reader.context].SetBridgePorts("", sline[1])
+		}
+	case "bridge_fd":
+		fd, err := strconv.Atoi(sline[1])
+		if err == nil {
+			reader.Adapters[reader.context].SetBridgeFd(fd)
+		} else {
+			reader.Adapters[reader.context].SetUnknown(line)
+		}
+	case "bridge_waitport":
+		wp, err := strconv.Atoi(sline[1])
+		if err == nil {
+			reader.Adapters[reader.context].SetBridgeWaitPort(wp)
+		} else {
+			reader.Adapters[reader.context].SetUnknown(line)
+		}
+	case "bridge_stp":
+		if sline[1] == "off" {
+			reader.Adapters[reader.context].SetBridgeStp(false)
+		} else if sline[1] == "on" {
+			reader.Adapters[reader.context].SetBridgeStp(true)
+		}
 	default:
 		//log.Println("Unknow options",sline)
 		if reader.context != -1 {
-			reader.Adapters[reader.context].SetUnkonw(line)
+			reader.Adapters[reader.context].SetUnknown(line)
 		}
 	}
 	return nil
